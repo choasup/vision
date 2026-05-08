@@ -98,6 +98,10 @@
   .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #2c3e50; }
   .btn.secondary { background: #34495e; }
   .btn.secondary:hover { background: #4a5d7a; }
+  .btn.revive { background: #16a085; }
+  .btn.revive:hover { background: #1abc9c; }
+  .btn.revive::before { content: ''; }
+  .btn:disabled, .btn.disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
   .btnRow { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px; }
   .new { color: #d81b60; font-weight: 800; font-size: 14px; margin-bottom: 8px; }
   .footer {
@@ -157,10 +161,10 @@
     <div class="quote" id="quote"></div>
     <div class="evo" id="evo"></div>
     <div class="overlay" id="startOverlay">
-      <div class="panel">
+      <div class="panel" id="startPanel">
         <h1>打工人合成记</h1>
-        <div class="sub">从实习生到财富自由，需要几次合成？</div>
-        <div class="sub">同岗位相撞 → 升职 → 一路卷到老板</div>
+        <div class="sub" id="startSub1">从实习生到财富自由，需要几次合成？</div>
+        <div class="sub" id="startSub2">同岗位相撞 → 升职 → 一路卷到老板</div>
         <div class="sub" style="margin-bottom: 18px; color: #888">移动选位置 · 点击 / 空格丢下</div>
         <div class="btn" id="startBtn">开始打工</div>
       </div>
@@ -177,6 +181,9 @@
         <div class="stats">
           <div class="stat"><div class="k">工资</div><div class="v" id="finalScore">0</div></div>
           <div class="stat"><div class="k">巅峰</div><div class="v" id="finalBest">0</div></div>
+        </div>
+        <div class="btnRow">
+          <div class="btn revive" id="reviveBtn">📺 看广告续命</div>
         </div>
         <div class="btnRow">
           <div class="btn" id="retryBtn">再卷一次</div>
@@ -202,17 +209,58 @@
 
 <script>
 (() => {
+  // ========== 平台适配（微信 / 抖音小游戏 / Web） ==========
+  const PLATFORM = (() => {
+    if (typeof tt !== 'undefined' && tt.getSystemInfoSync) return 'tt';   // 抖音小游戏
+    if (typeof wx !== 'undefined' && wx.getSystemInfoSync) return 'wx';   // 微信小游戏
+    if (typeof qq !== 'undefined' && qq.getSystemInfoSync) return 'qq';
+    return 'web';
+  })();
+
   // ========== 埋点 ==========
   const track = (event, params = {}) => {
-    const data = { event, ts: Date.now(), ...params };
+    const data = { event, ts: Date.now(), platform: PLATFORM, ...params };
     try {
       window.dataLayer = window.dataLayer || [];
       window.dataLayer.push(data);
       if (typeof window.gtag === 'function') window.gtag('event', event, params);
       if (window.aplus_queue) window.aplus_queue.push({ action: 'aplus.record', arguments: [event, 'CLK', params] });
+      if (PLATFORM === 'wx' && wx.reportEvent) wx.reportEvent(event, params);
+      if (PLATFORM === 'tt' && tt.reportAnalytics) tt.reportAnalytics(event, params);
     } catch (e) {}
     if (window.__DEBUG_TRACK__) console.log('[track]', data);
   };
+
+  // ========== 激励视频（IAA 续命入口） ==========
+  const Ad = {
+    rewardedVideo: null,
+    init() {
+      if (PLATFORM === 'wx' && wx.createRewardedVideoAd) {
+        this.rewardedVideo = wx.createRewardedVideoAd({ adUnitId: 'TODO_WX_AD_UNIT_ID' });
+      } else if (PLATFORM === 'tt' && tt.createRewardedVideoAd) {
+        this.rewardedVideo = tt.createRewardedVideoAd({ adUnitId: 'TODO_TT_AD_UNIT_ID' });
+      }
+      if (this.rewardedVideo) this.rewardedVideo.load && this.rewardedVideo.load();
+    },
+    show(onReward, onFail) {
+      // Web 调试：直接 1.5s 后回调成功
+      if (!this.rewardedVideo) {
+        setTimeout(() => onReward({ isEnded: true, mock: true }), 1200);
+        return;
+      }
+      const ad = this.rewardedVideo;
+      const onClose = (res) => {
+        ad.offClose && ad.offClose(onClose);
+        if (res && res.isEnded) onReward(res);
+        else onFail && onFail({ reason: 'user_skip' });
+      };
+      ad.onClose && ad.onClose(onClose);
+      ad.show().catch(() => {
+        ad.load && ad.load().then(() => ad.show()).catch(e => onFail && onFail({ reason: 'load_fail', error: e }));
+      });
+    },
+  };
+  Ad.init();
 
   const cvs = document.getElementById('game');
   const ctx = cvs.getContext('2d');
@@ -227,6 +275,7 @@
   const shareOverlay = document.getElementById('shareOverlay');
   const startBtn = document.getElementById('startBtn');
   const retryBtn = document.getElementById('retryBtn');
+  const reviveBtn = document.getElementById('reviveBtn');
   const shareBtn = document.getElementById('shareBtn');
   const shareCloseBtn = document.getElementById('shareCloseBtn');
   const shareDownloadBtn = document.getElementById('shareDownloadBtn');
@@ -248,17 +297,38 @@
 
   // ========== 11 级职场进化 ==========
   const ROLES = [
-    { r: 14,  color: '#95a5a6', emoji: '🎓', name: '实习生',     score: 1,   quote: '' },
-    { r: 19,  color: '#7eb8e2', emoji: '😩', name: '试用期',     score: 3,   quote: '试用期通过！' },
-    { r: 26,  color: '#4a90e2', emoji: '💻', name: '专员',       score: 6,   quote: '终于转正了 🎉' },
-    { r: 33,  color: '#9b59b6', emoji: '📋', name: '主管',       score: 10,  quote: '升职为主管' },
-    { r: 41,  color: '#e67e22', emoji: '👔', name: '经理',       score: 15,  quote: '签了 OKR，还要加班' },
-    { r: 50,  color: '#e74c3c', emoji: '💼', name: '总监',       score: 21,  quote: '总监 hat 戴上了' },
-    { r: 60,  color: '#c0392b', emoji: '🎯', name: 'VP',         score: 28,  quote: '副总裁，年终翻倍' },
-    { r: 72,  color: '#f1c40f', emoji: '👑', name: 'CEO',        score: 36,  quote: 'CEO，公司是我的了' },
-    { r: 86,  color: '#1abc9c', emoji: '🚀', name: '创始人',     score: 45,  quote: '敲钟梦想成真 🚀' },
-    { r: 102, color: '#27ae60', emoji: '💰', name: '投资人',     score: 55,  quote: 'FA：有好项目吗？' },
-    { r: 120, color: '#16a085', emoji: '🏝️', name: '财富自由', score: 100, quote: '老板我不干了 🏝️' },
+    { r: 14,  color: '#95a5a6', emoji: '🎓', name: '实习生',     score: 1 },
+    { r: 19,  color: '#7eb8e2', emoji: '😩', name: '试用期',     score: 3 },
+    { r: 26,  color: '#4a90e2', emoji: '💻', name: '专员',       score: 6 },
+    { r: 33,  color: '#9b59b6', emoji: '📋', name: '主管',       score: 10 },
+    { r: 41,  color: '#e67e22', emoji: '👔', name: '经理',       score: 15 },
+    { r: 50,  color: '#e74c3c', emoji: '💼', name: '总监',       score: 21 },
+    { r: 60,  color: '#c0392b', emoji: '🎯', name: 'VP',         score: 28 },
+    { r: 72,  color: '#f1c40f', emoji: '👑', name: 'CEO',        score: 36 },
+    { r: 86,  color: '#1abc9c', emoji: '🚀', name: '创始人',     score: 45 },
+    { r: 102, color: '#27ae60', emoji: '💰', name: '投资人',     score: 55 },
+    { r: 120, color: '#16a085', emoji: '🏝️', name: '财富自由', score: 100 },
+  ];
+
+  // 每级升职台词池（每级 4-5 句随机抽，避免重复）
+  const QUOTES = [
+    [],
+    ['试用期通过！', '人事说还行', '续签了三个月', '老板拍肩："你不错"'],
+    ['终于转正了 🎉', '工号下来了', '入职大礼包到了', 'HR 带我办了门禁卡'],
+    ['升职为主管', '管 3 个人了', '可以坐会议室主位了', '工位换大了一档'],
+    ['签了 OKR，又要加班', '经理 hat 戴上了', '开会能甩锅了', '部门年会我主持'],
+    ['年终翻倍 💰', '总监！配车了', '战略会议有我一席', 'HRBP 改口叫我哥'],
+    ['副总裁，飘了 🎯', '美元年薪到手', '助理帮我排日程', 'PR 稿上有我名字'],
+    ['公司是我的了 👑', '上过财经封面了', '股东问我下季度规划', '出门有 SUV'],
+    ['敲钟梦想成真 🚀', 'IPO 当天涨停', '路演讲了 100 次', '招股书都背下来了'],
+    ['FA：有好项目吗？', '我现在是 LP', '写小作文教年轻人', '投资 30 个项目'],
+    ['老板我不干了 🏝️', 'WLB 我自己定', '在马尔代夫敲键盘', '退休躺平专家'],
+  ];
+
+  // COMBO 加薪台词（连击 ≥3 时随机弹）
+  const COMBO_QUOTES = [
+    '加薪 30%！', '团建去三亚！', 'OKR 直接 3.75', '股票翻倍！',
+    '拿到 SP offer', '挖墙脚的来了', '猎头狂打电话',
   ];
 
   const OVER_TITLES = [
@@ -267,7 +337,18 @@
     { title: '毕业典礼', sub: 'N+1 已到账，请保持联系' },
     { title: '精神内耗', sub: '建议休假调整一下' },
     { title: '不是个人能力问题', sub: '是大环境不好' },
+    { title: '业务线调整', sub: '我们决定换个赛道' },
+    { title: '降本增效', sub: '你不幸地代表了「本」' },
   ];
+
+  function pickQuote(level) {
+    const arr = QUOTES[level] || [];
+    if (arr.length === 0) return '';
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+  function pickComboQuote() {
+    return COMBO_QUOTES[Math.floor(Math.random() * COMBO_QUOTES.length)];
+  }
 
   const STATE = { READY: 0, PLAY: 1, OVER: 2 };
   let state = STATE.READY;
@@ -296,6 +377,7 @@
   let levelMilestoneFired = new Set();
   let startTime = 0;
   let quoteTimer = 0;
+  let reviveUsed = false;
 
   bestEl.textContent = best;
 
@@ -314,6 +396,7 @@
     comboCount = 0; comboTimer = 0; won = false;
     dropCount = 0; mergeCount = 0; highestRole = 0;
     firstMergeFired = false; levelMilestoneFired = new Set();
+    reviveUsed = false;
     unlocked = new Array(ROLES.length).fill(false);
     curLevel = rndStartLevel();
     nextLevel = rndStartLevel();
@@ -501,11 +584,14 @@
             if (comboCount >= 2) showCombo(nx, ny - 30, 'COMBO ×' + comboCount);
             if (nl > highestRole) {
               highestRole = nl;
-              showQuote(ROLES[nl].quote);
+              showQuote(pickQuote(nl));
               if ([3, 5, 7, 9, 10].includes(nl) && !levelMilestoneFired.has(nl)) {
                 levelMilestoneFired.add(nl);
                 track('reach_level', { level: nl, role: ROLES[nl].name });
               }
+            } else if (comboCount >= 3 && quoteTimer < 30) {
+              // 高 combo 时偶尔弹个加薪 buff 文案
+              showQuote(pickComboQuote());
             }
             if (nl === ROLES.length - 1) {
               showCombo(nx, ny - 50, '🏝️ 财富自由！');
@@ -646,8 +732,48 @@
         overTitle.textContent = pick.title;
         overSub.textContent = pick.sub;
       }
+      // 续命按钮：只能用一次，且赢了之后不显示
+      if (!reviveUsed && !won) {
+        reviveBtn.classList.remove('disabled');
+        reviveBtn.style.display = '';
+      } else {
+        reviveBtn.style.display = 'none';
+      }
       overOverlay.classList.remove('hidden');
     }, 600);
+  }
+
+  function tryRevive() {
+    if (reviveUsed || state !== STATE.OVER) return;
+    track('revive_click', { score, highest_role: highestRole });
+    reviveBtn.classList.add('disabled');
+    reviveBtn.textContent = '📺 加载中...';
+    Ad.show(
+      () => {
+        reviveUsed = true;
+        // 清掉 DANGER 线以上漂浮的最大那批：保留半数下面的方块
+        balls.sort((a, b) => a.y - b.y);
+        const removeCount = Math.min(3, Math.max(1, Math.floor(balls.length * 0.3)));
+        for (let i = 0; i < removeCount && balls.length > 0; i++) {
+          const b = balls.shift();
+          burst(b.x, b.y, ROLES[b.level].color, b.r);
+        }
+        dangerTimer = 0;
+        scoreEl.textContent = score;
+        renderEvo();
+        overOverlay.classList.add('hidden');
+        reviveBtn.textContent = '📺 看广告续命';
+        state = STATE.PLAY;
+        showQuote('回血成功，再战 🔥');
+        track('revive_success', { score, highest_role: highestRole });
+      },
+      (err) => {
+        reviveBtn.classList.remove('disabled');
+        reviveBtn.textContent = '📺 看广告续命';
+        showQuote('广告加载失败，再来一把吧');
+        track('revive_fail', { reason: err && err.reason });
+      }
+    );
   }
 
   function render() {
@@ -806,11 +932,31 @@
   }
 
   function openShare() {
+    track('share_open', { highest_role: highestRole, score, platform: PLATFORM });
+    // 微信 / 抖音小游戏：直接调原生分享 API
+    if (PLATFORM === 'wx' && wx.shareAppMessage) {
+      wx.shareAppMessage({
+        title: `我已升到 ${ROLES[highestRole].name}（${score} 工资），你能比我高吗？`,
+        imageUrl: '',
+        query: `from=share&role=${highestRole}`,
+      });
+      return;
+    }
+    if (PLATFORM === 'tt' && tt.shareAppMessage) {
+      tt.shareAppMessage({
+        channel: 'video',
+        title: `我已升到 ${ROLES[highestRole].name}，你能比我高吗？`,
+        desc: '打工人合成记 · 卷到财富自由',
+        success: () => track('share_success', { platform: PLATFORM }),
+        fail: (e) => track('share_fail', { platform: PLATFORM, error: String(e) }),
+      });
+      return;
+    }
+    // Web：渲染战报图，预览 + 下载
     const dataUrl = buildShareCard();
     shareImg.src = dataUrl;
     overOverlay.classList.add('hidden');
     shareOverlay.classList.remove('hidden');
-    track('share_open', { highest_role: highestRole, score });
   }
 
   function downloadShare() {
@@ -868,12 +1014,27 @@
 
   startBtn.addEventListener('click', start);
   retryBtn.addEventListener('click', start);
+  reviveBtn.addEventListener('click', tryRevive);
   shareBtn.addEventListener('click', openShare);
   shareCloseBtn.addEventListener('click', () => {
     shareOverlay.classList.add('hidden');
     overOverlay.classList.remove('hidden');
   });
   shareDownloadBtn.addEventListener('click', downloadShare);
+
+  // 首次启动剧情铺垫
+  function setupIntro() {
+    const seen = localStorage.getItem('dgr_intro_seen');
+    if (!seen) {
+      const sub1 = document.getElementById('startSub1');
+      const sub2 = document.getElementById('startSub2');
+      if (sub1) sub1.textContent = '又是想躺平又躺不平的一天。';
+      if (sub2) sub2.textContent = '把同岗位合在一起，看你能卷到第几层。';
+      localStorage.setItem('dgr_intro_seen', '1');
+      track('first_visit');
+    }
+  }
+  setupIntro();
 
   function fit() {
     const padW = window.innerWidth - 16;
