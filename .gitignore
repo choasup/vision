@@ -6,3 +6,7 @@ torchvision.egg-info/
 */**/*~
 *~
 docs/build
+
+# 微信开发者工具私有配置（含本机 appid / 编译选项，不要入库）
+mini-game/wxgame/project.private.config.json
+.DS_Store

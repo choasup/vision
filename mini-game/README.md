@@ -2,6 +2,13 @@
 
 一个单文件 HTML5 物理小游戏：从实习生卷到财富自由，**同岗位相撞 → 升职 → 财富自由**。
 
+## 两个版本
+
+| 目录 | 适用场景 |
+|---|---|
+| [`index.html`](./index.html) | **H5 / Web** 版。单文件，丢任何静态托管即可（Vercel/GitHub Pages/Cloudflare Pages/七牛/OSS），用来在抖音 H5、微信公众号文章里测题材 |
+| [`wxgame/`](./wxgame/) | **微信小游戏** 版。同款玩法，全 Canvas UI（无 DOM），用 `wx.createCanvas` / `wx.shareAppMessage` / `wx.createRewardedVideoAd`。开发者工具直接「导入项目」即可。提审 + 上线流程详见 [`wxgame/README.md`](./wxgame/README.md) |
+
 ## 玩法
 
 - 鼠标移动 / 触屏拖动 → 选择落点

@@ -1,0 +1,27 @@
+{
+  "description": "打工人合成记 - 微信小游戏版",
+  "miniprogramRoot": "./",
+  "compileType": "miniprogram",
+  "appid": "TODO_REPLACE_WITH_YOUR_WX_APPID",
+  "projectname": "dagongren-merge",
+  "setting": {
+    "es6": true,
+    "postcss": false,
+    "minified": true,
+    "newFeature": true,
+    "uploadWithSourceMap": true,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    },
+    "ignoreUploadUnusedFiles": true,
+    "checkInvalidKey": true
+  },
+  "libVersion": "3.4.6",
+  "condition": {},
+  "editorSetting": {
+    "tabIndent": "insertSpaces",
+    "tabSize": 2
+  }
+}
