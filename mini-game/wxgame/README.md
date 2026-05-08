@@ -19,8 +19,9 @@ wxgame/
 
 - **全 Canvas UI**：所有面板、按钮、分数框都在 canvas 上画，通过坐标命中测试响应触摸。runtime 没有 DOM。
 - **逻辑/像素分离**：物理用 380×540 设计坐标，渲染时按 `stageScale` 缩放到屏幕，触摸坐标反向换算回设计坐标。
-- **`wx.createRewardedVideoAd` 续命**：`Ad.init()` 在启动时预加载，结束面板根据 `Ad.available()` 决定是否显示续命按钮。adUnitId 现为 `TODO_REPLACE_WX_AD_UNIT_ID`，需替换。
-- **`wx.shareAppMessage` 原生分享**：右上角菜单（`wx.showShareMenu`）和结束面板的"分享给朋友"按钮都接入。
+- **续命懒加载**：结束面板始终显示「📺 看广告续命」按钮（除非已用过或已赢），点击时再走 `wx.createRewardedVideoAd` 的 `show → 失败重 load → 重 show` 兜底流程，加载中按钮置灰显示「加载中...」。adUnitId 占位为 `TODO_REPLACE_WX_AD_UNIT_ID`。
+- **分享卡片图**：用 `wx.createCanvas()` 第二次调用得到的离屏 canvas 画 500×400 PNG（顶部头衔角色 + 工资 + "你能比我高吗"），`canvas.toTempFilePathSync` 拿到本地临时路径后传给 `wx.shareAppMessage` 的 `imageUrl`。右上角菜单分享和结束面板分享按钮都用同一张图。
+- **触觉反馈**：`wx.vibrateShort` 区分轻 / 中 / 重——普通合成 `light`，新解锁职级 `medium`，CEO 以上和「财富自由 ×2」`heavy`。
 - **`wx.setStorageSync` 持久化**：键名 `dgr_best`、`dgr_best_role`、`dgr_intro_seen`。
 - **埋点经 `wx.reportEvent`**：事件名与 H5 版一致（`game_start`/`first_merge`/`reach_level`/`game_over`/`revive_*`/`share_*`），调试时 `GameGlobal.__DEBUG_TRACK__ = true`。
 

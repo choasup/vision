@@ -67,10 +67,20 @@ Ad.init();
 
 // ========== 微信右上角分享菜单 ==========
 wx.showShareMenu && wx.showShareMenu({ withShareTicket: false, menus: ['shareAppMessage', 'shareTimeline'] });
-wx.onShareAppMessage && wx.onShareAppMessage(() => ({
-  title: shareTitle(),
-  query: 'from=topbar',
-}));
+wx.onShareAppMessage && wx.onShareAppMessage(() => {
+  const imageUrl = buildShareImagePath();
+  return {
+    title: shareTitle(),
+    imageUrl: imageUrl || undefined,
+    query: 'from=topbar&role=' + highestRole,
+  };
+});
+
+// 触觉反馈封装：按事件强度区分轻 / 中 / 重
+function buzz(kind) {
+  if (!wx.vibrateShort) return;
+  try { wx.vibrateShort({ type: kind || 'light' }); } catch (e) {}
+}
 
 // ========== 2. 数据 ==========
 const ROLES = [
@@ -159,6 +169,7 @@ let firstMergeFired = false, levelMilestoneFired = new Set();
 let startTime = 0;
 let quoteText = '', quoteTimer = 0;
 let reviveUsed = false;
+let reviveLoading = false;
 let buttons = []; // 当前激活面板的按钮命中测试列表
 let overTitle = '', overSub = '';
 
@@ -183,6 +194,7 @@ function reset() {
   dropCount = 0; mergeCount = 0; highestRole = 0;
   firstMergeFired = false; levelMilestoneFired = new Set();
   reviveUsed = false;
+  reviveLoading = false;
   unlocked = new Array(ROLES.length).fill(false);
   curLevel = rndStartLevel();
   nextLevel = rndStartLevel();
@@ -284,12 +296,14 @@ function step() {
           if (nl > highestRole) {
             highestRole = nl;
             showQuote(pickQuote(nl));
+            buzz(nl >= 7 ? 'heavy' : 'medium');
             if ([3, 5, 7, 9, 10].includes(nl) && !levelMilestoneFired.has(nl)) {
               levelMilestoneFired.add(nl);
               track('reach_level', { level: nl, role: ROLES[nl].name });
             }
-          } else if (comboCount >= 3 && quoteTimer < 30) {
-            showQuote(pickCombo());
+          } else {
+            buzz('light');
+            if (comboCount >= 3 && quoteTimer < 30) showQuote(pickCombo());
           }
           if (nl === ROLES.length - 1) {
             showCombo(nx, ny - 50, '🏝 财富自由！');
@@ -301,6 +315,7 @@ function step() {
           score += 1000;
           for (let k = 0; k < 60; k++) burstParticle((a.x+b.x)/2, (a.y+b.y)/2, '#16a085');
           showCombo((a.x+b.x)/2, (a.y+b.y)/2, '+1000 财富自由 ×2');
+          buzz('heavy');
         }
         break;
       }
@@ -388,10 +403,12 @@ function gameOver() {
 }
 
 function tryRevive() {
-  if (reviveUsed || state !== STATE.OVER) return;
+  if (reviveUsed || reviveLoading || state !== STATE.OVER) return;
+  reviveLoading = true;
   track('revive_click', { score, highest_role: highestRole });
   Ad.show(
     () => {
+      reviveLoading = false;
       reviveUsed = true;
       balls.sort((a, b) => a.y - b.y);
       const removeCount = Math.min(3, Math.max(1, Math.floor(balls.length * 0.3)));
@@ -402,11 +419,16 @@ function tryRevive() {
       dangerTimer = 0;
       state = STATE.PLAY;
       showQuote('回血成功，再战 🔥');
+      buzz('heavy');
       track('revive_success', { score, highest_role: highestRole });
     },
     (err) => {
-      showQuote('广告没加载好，再来一把吧');
-      track('revive_fail', { reason: err && err.reason });
+      reviveLoading = false;
+      const reason = err && err.reason;
+      if (reason === 'no_inst') showQuote('广告暂未配置，先再来一把');
+      else if (reason === 'load_fail') showQuote('广告加载失败，再来一把');
+      else showQuote('看完广告才能续命哦');
+      track('revive_fail', { reason });
     }
   );
 }
@@ -436,32 +458,88 @@ function drawRoundRect(x, y, w, h, r, fill, stroke, lineW) {
   if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineW || 2; ctx.stroke(); }
 }
 
-function drawRole(cx, cy, role, radius) {
-  ctx.save();
-  ctx.fillStyle = 'rgba(0,0,0,0.18)';
-  ctx.beginPath();
-  ctx.ellipse(cx, cy + radius * 0.85, radius * 0.85, radius * 0.25, 0, 0, Math.PI * 2);
-  ctx.fill();
-  const grd = ctx.createRadialGradient(cx - radius * 0.35, cy - radius * 0.35, radius * 0.1, cx, cy, radius);
+function drawRoleOn(c, cx, cy, role, radius) {
+  c.save();
+  c.fillStyle = 'rgba(0,0,0,0.18)';
+  c.beginPath();
+  c.ellipse(cx, cy + radius * 0.85, radius * 0.85, radius * 0.25, 0, 0, Math.PI * 2);
+  c.fill();
+  const grd = c.createRadialGradient(cx - radius * 0.35, cy - radius * 0.35, radius * 0.1, cx, cy, radius);
   grd.addColorStop(0, lighten(role.color, 0.45));
   grd.addColorStop(0.55, role.color);
   grd.addColorStop(1, darken(role.color, 0.25));
-  ctx.fillStyle = grd;
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = darken(role.color, 0.45);
-  ctx.lineWidth = Math.max(1.5, radius * 0.06);
-  ctx.stroke();
-  ctx.font = `${radius * 1.2}px sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(role.emoji, cx, cy + radius * 0.06);
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  ctx.beginPath();
-  ctx.ellipse(cx - radius * 0.35, cy - radius * 0.45, radius * 0.32, radius * 0.18, -0.5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  c.fillStyle = grd;
+  c.beginPath();
+  c.arc(cx, cy, radius, 0, Math.PI * 2);
+  c.fill();
+  c.strokeStyle = darken(role.color, 0.45);
+  c.lineWidth = Math.max(1.5, radius * 0.06);
+  c.stroke();
+  c.font = `${radius * 1.2}px sans-serif`;
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillText(role.emoji, cx, cy + radius * 0.06);
+  c.fillStyle = 'rgba(255,255,255,0.4)';
+  c.beginPath();
+  c.ellipse(cx - radius * 0.35, cy - radius * 0.45, radius * 0.32, radius * 0.18, -0.5, 0, Math.PI * 2);
+  c.fill();
+  c.restore();
+}
+function drawRole(cx, cy, role, radius) { drawRoleOn(ctx, cx, cy, role, radius); }
+
+// ========== 分享卡片图（5:4，给 wx.shareAppMessage 用） ==========
+let _shareCanvas = null;
+function buildShareImagePath() {
+  try {
+    if (!_shareCanvas) _shareCanvas = wx.createCanvas();   // 第二次调用 = 离屏
+    const sc = _shareCanvas;
+    sc.width = 500; sc.height = 400;
+    const c = sc.getContext('2d');
+
+    const grd = c.createLinearGradient(0, 0, 0, 400);
+    grd.addColorStop(0, '#2c3e50');
+    grd.addColorStop(0.6, '#4a5d7a');
+    grd.addColorStop(1, '#e67e22');
+    c.fillStyle = grd; c.fillRect(0, 0, 500, 400);
+
+    c.fillStyle = '#ffffff';
+    c.fillRect(20, 24, 460, 352);
+    c.strokeStyle = '#2c3e50'; c.lineWidth = 4;
+    c.strokeRect(20, 24, 460, 352);
+
+    c.fillStyle = '#2c3e50';
+    c.font = 'bold 26px sans-serif';
+    c.textAlign = 'center'; c.textBaseline = 'top';
+    c.fillText('打工人合成记', 250, 46);
+
+    const role = ROLES[highestRole];
+    drawRoleOn(c, 250, 180, role, 60);
+
+    c.fillStyle = '#c0392b';
+    c.font = 'bold 22px sans-serif';
+    c.fillText('我升到了 ' + role.name, 250, 260);
+
+    if (won) {
+      c.fillStyle = '#16a085';
+      c.font = 'bold 16px sans-serif';
+      c.fillText('🏝 已实现财富自由', 250, 290);
+    }
+
+    c.fillStyle = '#7f8c8d';
+    c.font = '600 14px sans-serif';
+    c.fillText('工资 ' + score + ' · 你能比我高吗？', 250, won ? 314 : 300);
+
+    c.fillStyle = '#2c3e50';
+    c.font = 'bold 14px sans-serif';
+    c.fillText('搜「打工人合成记」立即开玩', 250, 348);
+
+    if (sc.toTempFilePathSync) {
+      return sc.toTempFilePathSync({ x: 0, y: 0, width: 500, height: 400, fileType: 'png' });
+    }
+  } catch (e) {
+    if (GameGlobal.__DEBUG_TRACK__) console.warn('[share-card]', e);
+  }
+  return '';
 }
 
 function drawBackground() {
@@ -691,27 +769,29 @@ function drawOverOverlay() {
   const bw = (pw - 60) / 2, bh = 40;
   const bgap = 10;
 
-  // 续命按钮（条件渲染）
+  // 续命按钮：只要本局没用过 + 没赢就显示；点击时再处理"未加载/无广告位"的失败
   let nextBy = py + ph - bh * 2 - bgap - 18;
-  if (!reviveUsed && !won && Ad.available()) {
+  if (!reviveUsed && !won) {
     const reviveBtn = {
       x: px + 24, y: nextBy, w: pw - 48, h: bh,
-      label: '📺 看广告续命', kind: 'revive', onTap: tryRevive,
+      label: reviveLoading ? '📺 加载中...' : '📺 看广告续命',
+      kind: 'revive',
+      onTap: reviveLoading ? () => {} : tryRevive,
     };
     buttons.push(reviveBtn);
     drawButton(reviveBtn);
-    nextBy = py + ph - bh - 18;
-  } else {
-    nextBy = py + ph - bh - 18;
   }
+  nextBy = py + ph - bh - 18;
 
   // 再卷一次 + 分享
   const retry = { x: px + 24, y: nextBy, w: bw, h: bh, label: '再卷一次', kind: 'primary', onTap: startGame };
   const shareBtn = { x: px + 36 + bw, y: nextBy, w: bw, h: bh, label: '分享给朋友', kind: 'secondary',
     onTap: () => {
       track('share_open', { highest_role: highestRole, score });
+      const imageUrl = buildShareImagePath();
       wx.shareAppMessage && wx.shareAppMessage({
         title: shareTitle(),
+        imageUrl: imageUrl || undefined,
         query: 'from=share_btn&role=' + highestRole,
       });
     } };
