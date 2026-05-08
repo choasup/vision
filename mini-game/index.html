@@ -3,14 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<title>合成大西瓜 · Watermelon</title>
+<title>打工人合成记 · 我用 30 秒升职到 CEO</title>
+<meta name="description" content="实习生→打工人→主管→经理→CEO→财富自由，11 级合成休闲小游戏。" />
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body {
     width: 100%; height: 100%; overflow: hidden;
     font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
-    color: #2b1d0e; user-select: none;
-    background: linear-gradient(160deg, #fde8c4 0%, #f6c79a 60%, #e8a06a 100%);
+    color: #1a2332; user-select: none;
+    background: linear-gradient(160deg, #2c3e50 0%, #4a5d7a 50%, #e67e22 100%);
   }
   #app {
     position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -18,18 +19,18 @@
   }
   .stage {
     position: relative;
-    background: linear-gradient(180deg, #fff7e3 0%, #ffe7b8 100%);
+    background: linear-gradient(180deg, #fafbfc 0%, #e8edf3 100%);
     border-radius: 20px;
-    box-shadow: 0 24px 60px rgba(120, 60, 0, .35), inset 0 0 0 4px #fff, inset 0 0 0 6px #cd853f;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .45), inset 0 0 0 4px #fff, inset 0 0 0 6px #34495e;
     padding: 14px;
   }
   canvas {
     display: block; touch-action: none; cursor: grab;
     border-radius: 12px;
     background:
-      radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.6), transparent 60%),
-      linear-gradient(180deg, #ffeec2 0%, #ffd590 100%);
-    box-shadow: inset 0 0 0 3px #b66a2f;
+      radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.7), transparent 60%),
+      linear-gradient(180deg, #f1f4f8 0%, #d6dde6 100%);
+    box-shadow: inset 0 0 0 3px #34495e;
   }
   canvas:active { cursor: grabbing; }
   .top {
@@ -37,67 +38,101 @@
     padding: 0 6px 10px; gap: 10px;
   }
   .scoreBox {
-    background: #fff; border: 3px solid #8b4513; border-radius: 12px;
-    padding: 6px 14px; box-shadow: 0 3px 0 #8b4513;
+    background: #fff; border: 3px solid #2c3e50; border-radius: 12px;
+    padding: 6px 14px; box-shadow: 0 3px 0 #2c3e50;
     min-width: 110px;
   }
-  .scoreBox .k { font-size: 11px; font-weight: 800; color: #8b4513; letter-spacing: 1px; }
-  .scoreBox .v { font-size: 22px; font-weight: 900; color: #2b1d0e; line-height: 1.1; }
+  .scoreBox .k { font-size: 11px; font-weight: 800; color: #2c3e50; letter-spacing: 1px; }
+  .scoreBox .v { font-size: 22px; font-weight: 900; color: #1a2332; line-height: 1.1; }
   .nextBox {
     display: flex; align-items: center; gap: 8px;
-    background: #fff; border: 3px solid #8b4513; border-radius: 12px;
-    padding: 4px 12px 4px 8px; box-shadow: 0 3px 0 #8b4513;
+    background: #fff; border: 3px solid #2c3e50; border-radius: 12px;
+    padding: 4px 12px 4px 8px; box-shadow: 0 3px 0 #2c3e50;
   }
-  .nextBox .label { font-size: 11px; font-weight: 800; color: #8b4513; letter-spacing: 1px; }
+  .nextBox .label { font-size: 11px; font-weight: 800; color: #2c3e50; letter-spacing: 1px; }
   #nextCvs { width: 48px; height: 48px; display: block; }
   .evo {
     margin-top: 10px; display: flex; align-items: center; justify-content: center;
-    gap: 4px; flex-wrap: wrap; padding: 6px 10px; background: rgba(255,255,255,.6);
-    border-radius: 10px; border: 2px dashed #b66a2f;
+    gap: 4px; flex-wrap: wrap; padding: 6px 10px; background: rgba(255,255,255,.7);
+    border-radius: 10px; border: 2px dashed #34495e;
   }
-  .evo .item { font-size: 18px; opacity: .85; transition: transform .2s; }
+  .evo .item { font-size: 18px; opacity: .35; transition: transform .2s, opacity .2s; }
   .evo .item.unlocked { opacity: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,.2)); transform: scale(1.1); }
-  .evo .arrow { color: #8b4513; font-weight: 900; font-size: 12px; }
+  .evo .arrow { color: #34495e; font-weight: 900; font-size: 12px; opacity: .6; }
   .overlay {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    background: rgba(0,0,0,.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    background: rgba(0,0,0,.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
     border-radius: 20px; transition: opacity .25s; pointer-events: auto;
   }
   .overlay.hidden { opacity: 0; pointer-events: none; }
   .panel {
-    background: linear-gradient(180deg, #fffdf4, #ffe9c0);
-    border: 4px solid #8b4513; border-radius: 18px; padding: 24px 28px;
-    text-align: center; min-width: 260px; box-shadow: 0 12px 0 #8b4513, 0 24px 60px rgba(0,0,0,.3);
+    background: linear-gradient(180deg, #ffffff, #f0f4f8);
+    border: 4px solid #2c3e50; border-radius: 18px; padding: 24px 28px;
+    text-align: center; min-width: 280px; max-width: 90%;
+    box-shadow: 0 12px 0 #2c3e50, 0 24px 60px rgba(0,0,0,.4);
   }
-  .panel h1 { font-size: 26px; margin-bottom: 6px; color: #8b4513; letter-spacing: 2px; }
-  .panel .sub { font-size: 13px; color: #5b3a14; margin-bottom: 14px; }
-  .panel .stats { display: flex; gap: 10px; justify-content: center; margin-bottom: 16px; }
+  .panel h1 { font-size: 26px; margin-bottom: 6px; color: #2c3e50; letter-spacing: 2px; }
+  .panel .sub { font-size: 13px; color: #4a5d7a; margin-bottom: 8px; line-height: 1.6; }
+  .panel .stats { display: flex; gap: 10px; justify-content: center; margin: 14px 0 16px; flex-wrap: wrap; }
   .panel .stat {
-    background: #fff; border: 3px solid #8b4513; border-radius: 10px;
+    background: #fff; border: 3px solid #2c3e50; border-radius: 10px;
     padding: 8px 14px; min-width: 96px;
   }
-  .panel .stat .k { font-size: 10px; font-weight: 800; color: #8b4513; letter-spacing: 1px; }
+  .panel .stat .k { font-size: 10px; font-weight: 800; color: #2c3e50; letter-spacing: 1px; }
   .panel .stat .v { font-size: 22px; font-weight: 900; }
-  .btn {
-    display: inline-block; cursor: pointer; padding: 10px 28px;
-    background: #ff6b35; color: #fff; border: 3px solid #8b4513; border-radius: 12px;
-    font-size: 16px; font-weight: 800; letter-spacing: 2px;
-    box-shadow: 0 4px 0 #8b4513; transition: transform .08s, box-shadow .08s;
+  .achieved {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    margin: 6px 0 12px; padding: 10px 16px;
+    background: linear-gradient(180deg, #fffbeb, #ffe9c4);
+    border: 3px dashed #e67e22; border-radius: 12px;
   }
-  .btn:hover { background: #ff8a5b; }
-  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #8b4513; }
+  .achieved .emoji { font-size: 42px; line-height: 1; }
+  .achieved .role { font-size: 16px; font-weight: 800; color: #c0392b; letter-spacing: 1px; }
+  .btn {
+    display: inline-block; cursor: pointer; padding: 10px 24px; margin: 4px 4px;
+    background: #e74c3c; color: #fff; border: 3px solid #2c3e50; border-radius: 12px;
+    font-size: 15px; font-weight: 800; letter-spacing: 2px;
+    box-shadow: 0 4px 0 #2c3e50; transition: transform .08s, box-shadow .08s, background .15s;
+  }
+  .btn:hover { background: #ff6b5b; }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #2c3e50; }
+  .btn.secondary { background: #34495e; }
+  .btn.secondary:hover { background: #4a5d7a; }
+  .btnRow { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px; }
   .new { color: #d81b60; font-weight: 800; font-size: 14px; margin-bottom: 8px; }
   .footer {
     position: absolute; bottom: 6px; left: 0; right: 0; text-align: center;
-    font-size: 11px; color: #8b4513; opacity: .6; letter-spacing: 1px;
+    font-size: 11px; color: #fff; opacity: .65; letter-spacing: 1px;
   }
+  .quote {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    top: 80px; padding: 8px 18px;
+    background: linear-gradient(180deg, #fffbeb, #ffe9c4);
+    border: 2px solid #e67e22; border-radius: 14px;
+    font-size: 14px; font-weight: 800; color: #c0392b;
+    pointer-events: none; opacity: 0;
+    box-shadow: 0 6px 14px rgba(0,0,0,.2);
+    white-space: nowrap;
+    transition: opacity .25s, transform .25s;
+  }
+  .quote.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .combo {
     position: absolute; pointer-events: none; font-weight: 900; font-size: 22px;
-    color: #ff3d00; text-shadow: 0 2px 0 #fff, 0 0 8px rgba(255, 100, 0, .7);
+    color: #e74c3c; text-shadow: 0 2px 0 #fff, 0 0 8px rgba(231, 76, 60, .7);
+  }
+  #shareCanvas { display: none; }
+  .shareImg {
+    max-width: 90%; max-height: 60vh; border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.3);
+    margin: 10px auto; display: block;
+  }
+  .hint {
+    font-size: 12px; color: #4a5d7a; margin-top: 8px; line-height: 1.5;
   }
   @media (max-height: 720px) {
     .panel { padding: 18px 22px; }
     .panel h1 { font-size: 22px; }
+    .achieved .emoji { font-size: 34px; }
   }
 </style>
 </head>
@@ -106,45 +141,79 @@
   <div class="stage" id="stage">
     <div class="top">
       <div class="scoreBox">
-        <div class="k">SCORE</div>
+        <div class="k">工资</div>
         <div class="v" id="score">0</div>
       </div>
       <div class="scoreBox">
-        <div class="k">BEST</div>
+        <div class="k">巅峰</div>
         <div class="v" id="best">0</div>
       </div>
       <div class="nextBox">
-        <span class="label">NEXT</span>
+        <span class="label">下一位</span>
         <canvas id="nextCvs" width="48" height="48"></canvas>
       </div>
     </div>
     <canvas id="game" width="380" height="540"></canvas>
+    <div class="quote" id="quote"></div>
     <div class="evo" id="evo"></div>
     <div class="overlay" id="startOverlay">
       <div class="panel">
-        <h1>合成大西瓜</h1>
-        <div class="sub">同种水果相撞 → 合成下一阶 → 凑出大西瓜！</div>
-        <div class="sub" style="margin-bottom: 18px">左右移动选位置，点击 / 空格丢下</div>
-        <div class="btn" id="startBtn">开始</div>
+        <h1>打工人合成记</h1>
+        <div class="sub">从实习生到财富自由，需要几次合成？</div>
+        <div class="sub">同岗位相撞 → 升职 → 一路卷到老板</div>
+        <div class="sub" style="margin-bottom: 18px; color: #888">移动选位置 · 点击 / 空格丢下</div>
+        <div class="btn" id="startBtn">开始打工</div>
       </div>
     </div>
     <div class="overlay hidden" id="overOverlay">
       <div class="panel">
-        <h1 id="overTitle">游戏结束</h1>
-        <div class="new" id="newBest" style="display:none">🎉 新纪录！</div>
-        <div class="stats">
-          <div class="stat"><div class="k">SCORE</div><div class="v" id="finalScore">0</div></div>
-          <div class="stat"><div class="k">BEST</div><div class="v" id="finalBest">0</div></div>
+        <h1 id="overTitle">毕业典礼</h1>
+        <div class="sub" id="overSub">祝你前程似锦</div>
+        <div class="achieved" id="achievedBox">
+          <div class="emoji" id="achievedEmoji">🎓</div>
+          <div class="role" id="achievedRole">实习生</div>
         </div>
-        <div class="btn" id="retryBtn">再来一把</div>
+        <div class="new" id="newBest" style="display:none">🎉 创下个人巅峰！</div>
+        <div class="stats">
+          <div class="stat"><div class="k">工资</div><div class="v" id="finalScore">0</div></div>
+          <div class="stat"><div class="k">巅峰</div><div class="v" id="finalBest">0</div></div>
+        </div>
+        <div class="btnRow">
+          <div class="btn" id="retryBtn">再卷一次</div>
+          <div class="btn secondary" id="shareBtn">生成战报</div>
+        </div>
+      </div>
+    </div>
+    <div class="overlay hidden" id="shareOverlay">
+      <div class="panel">
+        <h1>我的打工战报</h1>
+        <img class="shareImg" id="shareImg" alt="战报" />
+        <div class="hint">长按图片保存 · 分享到朋友圈 / 抖音</div>
+        <div class="btnRow" style="margin-top: 10px">
+          <div class="btn secondary" id="shareDownloadBtn">下载图片</div>
+          <div class="btn" id="shareCloseBtn">返回</div>
+        </div>
       </div>
     </div>
   </div>
 </div>
-<div class="footer">单文件 HTML5 · 物理合成休闲游戏</div>
+<canvas id="shareCanvas" width="600" height="900"></canvas>
+<div class="footer">打工人合成记 · 你升到哪一级了？</div>
 
 <script>
 (() => {
+  // ========== 埋点 ==========
+  const track = (event, params = {}) => {
+    const data = { event, ts: Date.now(), ...params };
+    try {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push(data);
+      if (typeof window.gtag === 'function') window.gtag('event', event, params);
+      if (window.aplus_queue) window.aplus_queue.push({ action: 'aplus.record', arguments: [event, 'CLK', params] });
+    } catch (e) {}
+    if (window.__DEBUG_TRACK__) console.log('[track]', data);
+  };
+
   const cvs = document.getElementById('game');
   const ctx = cvs.getContext('2d');
   const nextCvs = document.getElementById('nextCvs');
@@ -152,34 +221,52 @@
   const scoreEl = document.getElementById('score');
   const bestEl = document.getElementById('best');
   const evoEl = document.getElementById('evo');
+  const quoteEl = document.getElementById('quote');
   const startOverlay = document.getElementById('startOverlay');
   const overOverlay = document.getElementById('overOverlay');
+  const shareOverlay = document.getElementById('shareOverlay');
   const startBtn = document.getElementById('startBtn');
   const retryBtn = document.getElementById('retryBtn');
+  const shareBtn = document.getElementById('shareBtn');
+  const shareCloseBtn = document.getElementById('shareCloseBtn');
+  const shareDownloadBtn = document.getElementById('shareDownloadBtn');
+  const shareImg = document.getElementById('shareImg');
   const finalScore = document.getElementById('finalScore');
   const finalBest = document.getElementById('finalBest');
   const newBestEl = document.getElementById('newBest');
   const overTitle = document.getElementById('overTitle');
+  const overSub = document.getElementById('overSub');
+  const achievedEmoji = document.getElementById('achievedEmoji');
+  const achievedRole = document.getElementById('achievedRole');
   const stage = document.getElementById('stage');
+  const shareCanvas = document.getElementById('shareCanvas');
 
   const W = cvs.width, H = cvs.height;
   const WALL_L = 6, WALL_R = W - 6, WALL_B = H - 6;
   const DROP_Y = 56;
   const DANGER_Y = 96;
 
-  // 11 fruit tiers
-  const FRUITS = [
-    { r: 14,  color: '#ff5c5c', emoji: '🍒', name: '樱桃',     score: 1 },
-    { r: 19,  color: '#ff8a8a', emoji: '🍓', name: '草莓',     score: 3 },
-    { r: 26,  color: '#b066d8', emoji: '🍇', name: '葡萄',     score: 6 },
-    { r: 33,  color: '#ff9a3c', emoji: '🍊', name: '橘子',     score: 10 },
-    { r: 41,  color: '#ffd23f', emoji: '🍋', name: '柠檬',     score: 15 },
-    { r: 50,  color: '#ff6b6b', emoji: '🍎', name: '苹果',     score: 21 },
-    { r: 60,  color: '#c9e26a', emoji: '🍐', name: '梨',       score: 28 },
-    { r: 72,  color: '#ffb199', emoji: '🍑', name: '桃子',     score: 36 },
-    { r: 86,  color: '#ffce5c', emoji: '🍍', name: '菠萝',     score: 45 },
-    { r: 102, color: '#bce26a', emoji: '🍈', name: '甜瓜',     score: 55 },
-    { r: 120, color: '#5dba5d', emoji: '🍉', name: '大西瓜',   score: 100 },
+  // ========== 11 级职场进化 ==========
+  const ROLES = [
+    { r: 14,  color: '#95a5a6', emoji: '🎓', name: '实习生',     score: 1,   quote: '' },
+    { r: 19,  color: '#7eb8e2', emoji: '😩', name: '试用期',     score: 3,   quote: '试用期通过！' },
+    { r: 26,  color: '#4a90e2', emoji: '💻', name: '专员',       score: 6,   quote: '终于转正了 🎉' },
+    { r: 33,  color: '#9b59b6', emoji: '📋', name: '主管',       score: 10,  quote: '升职为主管' },
+    { r: 41,  color: '#e67e22', emoji: '👔', name: '经理',       score: 15,  quote: '签了 OKR，还要加班' },
+    { r: 50,  color: '#e74c3c', emoji: '💼', name: '总监',       score: 21,  quote: '总监 hat 戴上了' },
+    { r: 60,  color: '#c0392b', emoji: '🎯', name: 'VP',         score: 28,  quote: '副总裁，年终翻倍' },
+    { r: 72,  color: '#f1c40f', emoji: '👑', name: 'CEO',        score: 36,  quote: 'CEO，公司是我的了' },
+    { r: 86,  color: '#1abc9c', emoji: '🚀', name: '创始人',     score: 45,  quote: '敲钟梦想成真 🚀' },
+    { r: 102, color: '#27ae60', emoji: '💰', name: '投资人',     score: 55,  quote: 'FA：有好项目吗？' },
+    { r: 120, color: '#16a085', emoji: '🏝️', name: '财富自由', score: 100, quote: '老板我不干了 🏝️' },
+  ];
+
+  const OVER_TITLES = [
+    { title: '被优化了 💼', sub: '感谢你的贡献，祝前程似锦' },
+    { title: '组织架构调整', sub: '你的岗位被合并了' },
+    { title: '毕业典礼', sub: 'N+1 已到账，请保持联系' },
+    { title: '精神内耗', sub: '建议休假调整一下' },
+    { title: '不是个人能力问题', sub: '是大环境不好' },
   ];
 
   const STATE = { READY: 0, PLAY: 1, OVER: 2 };
@@ -189,21 +276,30 @@
   let combos = [];
   let nextId = 1;
   let score = 0;
-  let best = +(localStorage.getItem('suika_best') || 0);
+  let best = +(localStorage.getItem('dgr_best') || 0);
+  let bestRole = +(localStorage.getItem('dgr_best_role') || 0);
   let dropX = W / 2;
-  let cooldown = 0;     // frames after dropping before next fruit appears
-  let curLevel = 0;     // level of current dropping fruit (preview)
-  let nextLevel = 0;    // next fruit
+  let cooldown = 0;
+  let curLevel = 0;
+  let nextLevel = 0;
   let dangerTimer = 0;
-  let unlocked = new Array(FRUITS.length).fill(false);
+  let unlocked = new Array(ROLES.length).fill(false);
   let comboCount = 0;
   let comboTimer = 0;
   let won = false;
 
+  // 本局统计
+  let dropCount = 0;
+  let mergeCount = 0;
+  let highestRole = 0;
+  let firstMergeFired = false;
+  let levelMilestoneFired = new Set();
+  let startTime = 0;
+  let quoteTimer = 0;
+
   bestEl.textContent = best;
 
   function rndStartLevel() {
-    // Only first 5 tiers can drop
     const r = Math.random();
     if (r < 0.30) return 0;
     if (r < 0.55) return 1;
@@ -216,30 +312,44 @@
     balls = []; particles = []; combos = [];
     nextId = 1; score = 0; cooldown = 0; dangerTimer = 0;
     comboCount = 0; comboTimer = 0; won = false;
-    unlocked = new Array(FRUITS.length).fill(false);
+    dropCount = 0; mergeCount = 0; highestRole = 0;
+    firstMergeFired = false; levelMilestoneFired = new Set();
+    unlocked = new Array(ROLES.length).fill(false);
     curLevel = rndStartLevel();
     nextLevel = rndStartLevel();
     dropX = W / 2;
     scoreEl.textContent = '0';
+    quoteEl.classList.remove('show');
     renderEvo();
     renderNext();
   }
 
   function start() {
     reset();
+    startTime = Date.now();
     state = STATE.PLAY;
     startOverlay.classList.add('hidden');
     overOverlay.classList.add('hidden');
+    shareOverlay.classList.add('hidden');
+    track('game_start', { best });
+  }
+
+  function showQuote(text) {
+    if (!text) return;
+    quoteEl.textContent = text;
+    quoteEl.classList.add('show');
+    quoteTimer = 90;
   }
 
   function renderEvo() {
     evoEl.innerHTML = '';
-    for (let i = 0; i < FRUITS.length; i++) {
+    for (let i = 0; i < ROLES.length; i++) {
       const span = document.createElement('span');
       span.className = 'item' + (unlocked[i] ? ' unlocked' : '');
-      span.textContent = FRUITS[i].emoji;
+      span.textContent = ROLES[i].emoji;
+      span.title = ROLES[i].name;
       evoEl.appendChild(span);
-      if (i < FRUITS.length - 1) {
+      if (i < ROLES.length - 1) {
         const a = document.createElement('span');
         a.className = 'arrow';
         a.textContent = '›';
@@ -250,36 +360,31 @@
 
   function renderNext() {
     nctx.clearRect(0, 0, 48, 48);
-    drawFruitOn(nctx, 24, 24, FRUITS[nextLevel], 16);
+    drawRoleOn(nctx, 24, 24, ROLES[nextLevel], 16);
   }
 
-  function drawFruitOn(c, x, y, fruit, radius) {
+  function drawRoleOn(c, x, y, role, radius) {
     c.save();
-    // shadow
-    c.fillStyle = 'rgba(80,40,0,0.18)';
+    c.fillStyle = 'rgba(0,0,0,0.18)';
     c.beginPath();
     c.ellipse(x, y + radius * 0.85, radius * 0.85, radius * 0.25, 0, 0, Math.PI * 2);
     c.fill();
-    // body
     const grd = c.createRadialGradient(x - radius * 0.35, y - radius * 0.35, radius * 0.1, x, y, radius);
-    grd.addColorStop(0, lighten(fruit.color, 0.45));
-    grd.addColorStop(0.55, fruit.color);
-    grd.addColorStop(1, darken(fruit.color, 0.25));
+    grd.addColorStop(0, lighten(role.color, 0.45));
+    grd.addColorStop(0.55, role.color);
+    grd.addColorStop(1, darken(role.color, 0.25));
     c.fillStyle = grd;
     c.beginPath();
     c.arc(x, y, radius, 0, Math.PI * 2);
     c.fill();
-    // outline
-    c.strokeStyle = darken(fruit.color, 0.45);
+    c.strokeStyle = darken(role.color, 0.45);
     c.lineWidth = Math.max(1.5, radius * 0.06);
     c.stroke();
-    // emoji
-    c.font = `${radius * 1.4}px serif`;
+    c.font = `${radius * 1.2}px serif`;
     c.textAlign = 'center';
     c.textBaseline = 'middle';
-    c.fillText(fruit.emoji, x, y + radius * 0.06);
-    // gloss
-    c.fillStyle = 'rgba(255,255,255,0.35)';
+    c.fillText(role.emoji, x, y + radius * 0.06);
+    c.fillStyle = 'rgba(255,255,255,0.4)';
     c.beginPath();
     c.ellipse(x - radius * 0.35, y - radius * 0.45, radius * 0.32, radius * 0.18, -0.5, 0, Math.PI * 2);
     c.fill();
@@ -301,28 +406,27 @@
   function spawnBall(x, y, level) {
     return {
       id: nextId++, x, y, vx: 0, vy: 0,
-      level, r: FRUITS[level].r, mass: FRUITS[level].r * FRUITS[level].r,
+      level, r: ROLES[level].r, mass: ROLES[level].r * ROLES[level].r,
       angle: 0, omega: 0, age: 0, justMerged: 0,
     };
   }
 
-  function dropFruit() {
+  function dropPiece() {
     if (cooldown > 0 || state !== STATE.PLAY) return;
-    const fruit = FRUITS[curLevel];
-    const x = Math.max(WALL_L + fruit.r, Math.min(WALL_R - fruit.r, dropX));
-    const b = spawnBall(x, DROP_Y + fruit.r, curLevel);
-    b.vy = 0;
+    const role = ROLES[curLevel];
+    const x = Math.max(WALL_L + role.r, Math.min(WALL_R - role.r, dropX));
+    const b = spawnBall(x, DROP_Y + role.r, curLevel);
     balls.push(b);
     curLevel = nextLevel;
     nextLevel = rndStartLevel();
     cooldown = 28;
+    dropCount++;
     renderNext();
   }
 
   function step() {
     const G = 0.55;
     const FRICTION = 0.998;
-    // integrate
     for (const b of balls) {
       b.vy += G;
       b.vx *= FRICTION;
@@ -335,9 +439,7 @@
       if (b.justMerged > 0) b.justMerged--;
     }
 
-    // collisions: a few iterations for stability
     for (let it = 0; it < 5; it++) {
-      // walls
       for (const b of balls) {
         if (b.x - b.r < WALL_L) {
           b.x = WALL_L + b.r;
@@ -354,7 +456,6 @@
           b.omega *= 0.7;
         }
       }
-      // ball-ball
       for (let i = 0; i < balls.length; i++) {
         for (let j = i + 1; j < balls.length; j++) {
           resolve(balls[i], balls[j]);
@@ -362,7 +463,6 @@
       }
     }
 
-    // merges
     const merged = new Set();
     const toAdd = [];
     for (let i = 0; i < balls.length; i++) {
@@ -375,11 +475,15 @@
         const dx = b.x - a.x, dy = b.y - a.y;
         const d2 = dx * dx + dy * dy;
         const minD = a.r + b.r;
-        // a tiny tolerance so resting fruits merge
         if (d2 <= (minD + 0.6) * (minD + 0.6)) {
           merged.add(a.id);
           merged.add(b.id);
-          if (a.level < FRUITS.length - 1) {
+          mergeCount++;
+          if (!firstMergeFired) {
+            firstMergeFired = true;
+            track('first_merge');
+          }
+          if (a.level < ROLES.length - 1) {
             const nl = a.level + 1;
             const nx = (a.x + b.x) / 2;
             const ny = (a.y + b.y) / 2;
@@ -389,24 +493,30 @@
             nb.justMerged = 12;
             toAdd.push(nb);
             unlocked[nl] = true;
-            burst(nx, ny, FRUITS[nl].color, FRUITS[nl].r);
+            burst(nx, ny, ROLES[nl].color, ROLES[nl].r);
             comboCount++;
             comboTimer = 60;
-            const gain = FRUITS[nl].score * (1 + (comboCount > 1 ? (comboCount - 1) * 0.3 : 0)) | 0;
+            const gain = ROLES[nl].score * (1 + (comboCount > 1 ? (comboCount - 1) * 0.3 : 0)) | 0;
             score += gain;
             if (comboCount >= 2) showCombo(nx, ny - 30, 'COMBO ×' + comboCount);
-            if (nl === FRUITS.length - 1) {
-              // big watermelon achieved!
-              showCombo(nx, ny - 50, '🍉 大西瓜!');
-              for (let k = 0; k < 40; k++) burstParticle(nx, ny, FRUITS[nl].color);
+            if (nl > highestRole) {
+              highestRole = nl;
+              showQuote(ROLES[nl].quote);
+              if ([3, 5, 7, 9, 10].includes(nl) && !levelMilestoneFired.has(nl)) {
+                levelMilestoneFired.add(nl);
+                track('reach_level', { level: nl, role: ROLES[nl].name });
+              }
+            }
+            if (nl === ROLES.length - 1) {
+              showCombo(nx, ny - 50, '🏝️ 财富自由！');
+              for (let k = 0; k < 40; k++) burstParticle(nx, ny, ROLES[nl].color);
               score += 500;
-              if (!won) won = true;
+              if (!won) { won = true; track('won'); }
             }
           } else {
-            // two watermelons -> remove both, big bonus
             score += 1000;
-            for (let k = 0; k < 60; k++) burstParticle((a.x+b.x)/2, (a.y+b.y)/2, '#5dba5d');
-            showCombo((a.x+b.x)/2, (a.y+b.y)/2, '+1000!');
+            for (let k = 0; k < 60; k++) burstParticle((a.x+b.x)/2, (a.y+b.y)/2, '#16a085');
+            showCombo((a.x+b.x)/2, (a.y+b.y)/2, '+1000 财务自由 ×2');
           }
           break;
         }
@@ -420,8 +530,11 @@
     }
     if (comboTimer > 0) comboTimer--;
     else comboCount = 0;
+    if (quoteTimer > 0) {
+      quoteTimer--;
+      if (quoteTimer === 0) quoteEl.classList.remove('show');
+    }
 
-    // particles
     for (const p of particles) {
       p.age++;
       p.x += p.vx;
@@ -431,14 +544,12 @@
     }
     particles = particles.filter(p => p.age < p.life);
 
-    // combos float
     for (const c of combos) {
       c.age++;
       c.y -= 0.6;
     }
     combos = combos.filter(c => c.age < c.life);
 
-    // game over: any fruit (not just dropped) above danger line for too long
     let danger = false;
     for (const b of balls) {
       if (b.age > 30 && b.y - b.r < DANGER_Y && Math.abs(b.vy) < 1.2) {
@@ -472,7 +583,6 @@
     a.y -= ny * overlap * ka;
     b.x += nx * overlap * kb;
     b.y += ny * overlap * kb;
-    // velocity along normal
     const rvx = b.vx - a.vx, rvy = b.vy - a.vy;
     const vn = rvx * nx + rvy * ny;
     if (vn < 0) {
@@ -483,7 +593,6 @@
       a.vy -= iy / a.mass;
       b.vx += ix / b.mass;
       b.vy += iy / b.mass;
-      // friction induced spin
       const tx = -ny, ty = nx;
       const rvt = rvx * tx + rvy * ty;
       a.omega -= rvt * 0.002;
@@ -514,13 +623,29 @@
     if (state !== STATE.PLAY) return;
     state = STATE.OVER;
     let isNew = false;
-    if (score > best) { best = score; localStorage.setItem('suika_best', best); isNew = true; }
+    if (score > best) { best = score; localStorage.setItem('dgr_best', best); isNew = true; }
+    if (highestRole > bestRole) { bestRole = highestRole; localStorage.setItem('dgr_best_role', bestRole); }
     bestEl.textContent = best;
+    track('game_over', {
+      score, best, highest_role: highestRole, role_name: ROLES[highestRole].name,
+      drops: dropCount, merges: mergeCount, won,
+      duration_s: Math.round((Date.now() - startTime) / 1000),
+    });
     setTimeout(() => {
       finalScore.textContent = score;
       finalBest.textContent = best;
       newBestEl.style.display = isNew ? '' : 'none';
-      overTitle.textContent = won ? '🍉 制霸全场！' : '游戏结束';
+      const role = ROLES[highestRole];
+      achievedEmoji.textContent = role.emoji;
+      achievedRole.textContent = '我升到了：' + role.name;
+      if (won) {
+        overTitle.textContent = '🏝️ 财富自由！';
+        overSub.textContent = '老板，我不干了！';
+      } else {
+        const pick = OVER_TITLES[Math.floor(Math.random() * OVER_TITLES.length)];
+        overTitle.textContent = pick.title;
+        overSub.textContent = pick.sub;
+      }
       overOverlay.classList.remove('hidden');
     }, 600);
   }
@@ -528,18 +653,16 @@
   function render() {
     ctx.clearRect(0, 0, W, H);
 
-    // walls (left/right/bottom interior)
     ctx.save();
-    ctx.fillStyle = 'rgba(139,69,19,.12)';
+    ctx.fillStyle = 'rgba(52, 73, 94, .12)';
     ctx.fillRect(0, 0, WALL_L, H);
     ctx.fillRect(WALL_R, 0, W - WALL_R, H);
     ctx.fillRect(0, WALL_B, W, H - WALL_B);
     ctx.restore();
 
-    // danger line
     const dt = Math.min(1, dangerTimer / 90);
     ctx.save();
-    ctx.strokeStyle = `rgba(255, ${80 - dt * 80 | 0}, ${80 - dt * 80 | 0}, ${0.5 + dt * 0.4})`;
+    ctx.strokeStyle = `rgba(231, 76, ${60 - dt * 30 | 0}, ${0.5 + dt * 0.4})`;
     ctx.setLineDash([8, 6]);
     ctx.lineWidth = 2 + dt * 1.5;
     ctx.beginPath();
@@ -549,18 +672,16 @@
     ctx.setLineDash([]);
     ctx.restore();
 
-    // fruits
     for (const b of balls) {
       ctx.save();
       ctx.translate(b.x, b.y);
       const scale = b.justMerged > 0 ? 1 + Math.sin((12 - b.justMerged) / 12 * Math.PI) * 0.18 : 1;
       ctx.scale(scale, scale);
       ctx.rotate(b.angle);
-      drawFruitOn(ctx, 0, 0, FRUITS[b.level], b.r);
+      drawRoleOn(ctx, 0, 0, ROLES[b.level], b.r);
       ctx.restore();
     }
 
-    // particles
     for (const p of particles) {
       const a = 1 - p.age / p.life;
       ctx.globalAlpha = a;
@@ -571,7 +692,6 @@
     }
     ctx.globalAlpha = 1;
 
-    // combo text
     for (const c of combos) {
       const a = 1 - c.age / c.life;
       ctx.save();
@@ -581,28 +701,26 @@
       ctx.lineWidth = 4;
       ctx.strokeStyle = '#fff';
       ctx.strokeText(c.text, c.x, c.y);
-      ctx.fillStyle = '#ff3d00';
+      ctx.fillStyle = '#e74c3c';
       ctx.fillText(c.text, c.x, c.y);
       ctx.restore();
     }
 
-    // current dropping fruit preview
     if (state === STATE.PLAY && cooldown === 0) {
-      const fruit = FRUITS[curLevel];
-      const x = Math.max(WALL_L + fruit.r, Math.min(WALL_R - fruit.r, dropX));
-      // dotted guide
+      const role = ROLES[curLevel];
+      const x = Math.max(WALL_L + role.r, Math.min(WALL_R - role.r, dropX));
       ctx.save();
-      ctx.strokeStyle = 'rgba(139,69,19,.4)';
+      ctx.strokeStyle = 'rgba(52, 73, 94, .4)';
       ctx.setLineDash([4, 4]);
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(x, DROP_Y + fruit.r);
+      ctx.moveTo(x, DROP_Y + role.r);
       ctx.lineTo(x, WALL_B);
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.restore();
       ctx.globalAlpha = 0.95;
-      drawFruitOn(ctx, x, DROP_Y + fruit.r * 0.5, fruit, fruit.r);
+      drawRoleOn(ctx, x, DROP_Y + role.r * 0.5, role, role.r);
       ctx.globalAlpha = 1;
     }
   }
@@ -613,7 +731,99 @@
     requestAnimationFrame(loop);
   }
 
-  // Input
+  // ========== 分享战报 ==========
+  function buildShareCard() {
+    const sc = shareCanvas;
+    const sctx = sc.getContext('2d');
+    const W2 = sc.width, H2 = sc.height;
+
+    const grd = sctx.createLinearGradient(0, 0, 0, H2);
+    grd.addColorStop(0, '#2c3e50');
+    grd.addColorStop(0.6, '#4a5d7a');
+    grd.addColorStop(1, '#e67e22');
+    sctx.fillStyle = grd;
+    sctx.fillRect(0, 0, W2, H2);
+
+    sctx.fillStyle = '#ffffff';
+    sctx.fillRect(40, 60, W2 - 80, H2 - 120);
+    sctx.strokeStyle = '#2c3e50';
+    sctx.lineWidth = 6;
+    sctx.strokeRect(40, 60, W2 - 80, H2 - 120);
+
+    sctx.fillStyle = '#2c3e50';
+    sctx.font = '900 44px -apple-system, "PingFang SC", sans-serif';
+    sctx.textAlign = 'center';
+    sctx.fillText('打工人合成记', W2 / 2, 140);
+
+    sctx.fillStyle = '#7f8c8d';
+    sctx.font = '600 20px -apple-system, "PingFang SC", sans-serif';
+    sctx.fillText('我的职场战报', W2 / 2, 175);
+
+    const role = ROLES[highestRole];
+    sctx.save();
+    drawRoleOn(sctx, W2 / 2, 320, role, 90);
+    sctx.restore();
+
+    sctx.fillStyle = '#c0392b';
+    sctx.font = '900 36px -apple-system, "PingFang SC", sans-serif';
+    sctx.textAlign = 'center';
+    sctx.fillText('我升到了 ' + role.name, W2 / 2, 460);
+
+    if (won) {
+      sctx.fillStyle = '#16a085';
+      sctx.font = '700 22px -apple-system, "PingFang SC", sans-serif';
+      sctx.fillText('🏝️ 已实现财富自由', W2 / 2, 495);
+    }
+
+    const stats = [
+      { k: '工资', v: score },
+      { k: '巅峰', v: best },
+      { k: '合成次数', v: mergeCount },
+    ];
+    const sy = won ? 555 : 535;
+    const sw = (W2 - 120) / stats.length;
+    for (let i = 0; i < stats.length; i++) {
+      const sx = 60 + sw * i + sw / 2;
+      sctx.fillStyle = '#ecf0f1';
+      sctx.fillRect(60 + sw * i + 8, sy, sw - 16, 90);
+      sctx.fillStyle = '#7f8c8d';
+      sctx.font = '600 16px -apple-system, "PingFang SC", sans-serif';
+      sctx.fillText(stats[i].k, sx, sy + 30);
+      sctx.fillStyle = '#2c3e50';
+      sctx.font = '900 30px -apple-system, "PingFang SC", sans-serif';
+      sctx.fillText(stats[i].v, sx, sy + 65);
+    }
+
+    sctx.fillStyle = '#2c3e50';
+    sctx.font = '800 26px -apple-system, "PingFang SC", sans-serif';
+    sctx.fillText('你能比我高吗？', W2 / 2, sy + 160);
+
+    sctx.fillStyle = '#7f8c8d';
+    sctx.font = '500 16px -apple-system, "PingFang SC", sans-serif';
+    sctx.fillText('搜「打工人合成记」立即开玩', W2 / 2, sy + 195);
+
+    return sc.toDataURL('image/png');
+  }
+
+  function openShare() {
+    const dataUrl = buildShareCard();
+    shareImg.src = dataUrl;
+    overOverlay.classList.add('hidden');
+    shareOverlay.classList.remove('hidden');
+    track('share_open', { highest_role: highestRole, score });
+  }
+
+  function downloadShare() {
+    const a = document.createElement('a');
+    a.href = shareImg.src;
+    a.download = `打工人合成记_${ROLES[highestRole].name}_${score}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    track('share_download', { highest_role: highestRole, score });
+  }
+
+  // ========== 输入 ==========
   function getX(evt) {
     const rect = cvs.getBoundingClientRect();
     const sx = (evt.touches ? evt.touches[0].clientX : evt.clientX) - rect.left;
@@ -626,7 +836,7 @@
     dropX = getX(e);
   });
   cvs.addEventListener('mouseup', (e) => {
-    if (pointerDown) { dropX = getX(e); dropFruit(); }
+    if (pointerDown) { dropX = getX(e); dropPiece(); }
     pointerDown = false;
   });
   cvs.addEventListener('touchstart', (e) => {
@@ -640,7 +850,7 @@
   }, { passive: false });
   cvs.addEventListener('touchend', (e) => {
     e.preventDefault();
-    if (pointerDown) dropFruit();
+    if (pointerDown) dropPiece();
     pointerDown = false;
   }, { passive: false });
 
@@ -651,22 +861,25 @@
       dropX = Math.min(WALL_R - 5, dropX + 18);
     } else if (e.code === 'Space' || e.code === 'ArrowDown' || e.code === 'KeyS' || e.code === 'Enter') {
       e.preventDefault();
-      if (state === STATE.OVER) start();
-      else if (state === STATE.READY) start();
-      else dropFruit();
+      if (state === STATE.OVER || state === STATE.READY) start();
+      else dropPiece();
     }
   });
 
   startBtn.addEventListener('click', start);
   retryBtn.addEventListener('click', start);
+  shareBtn.addEventListener('click', openShare);
+  shareCloseBtn.addEventListener('click', () => {
+    shareOverlay.classList.add('hidden');
+    overOverlay.classList.remove('hidden');
+  });
+  shareDownloadBtn.addEventListener('click', downloadShare);
 
-  // fit
   function fit() {
     const padW = window.innerWidth - 16;
     const padH = window.innerHeight - 16;
-    // Ideal stage size includes 14px padding + top + evo. Compute scale.
-    const stageW = W + 28;          // canvas + horizontal padding
-    const stageH = H + 28 + 60 + 50; // canvas + padding + top + evo
+    const stageW = W + 28;
+    const stageH = H + 28 + 60 + 50;
     const s = Math.min(padW / stageW, padH / stageH, 1);
     stage.style.transform = `scale(${s})`;
     stage.style.transformOrigin = 'center center';
